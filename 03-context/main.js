@@ -1,4 +1,3 @@
-// @ts-check
 import '../style.css';
 import { createMachine, assign, interpret, send } from 'xstate';
 import elements from '../utils/elements';
@@ -8,6 +7,12 @@ import { formatTime } from '../utils/formatTime';
 const playerMachine = createMachine({
   initial: 'loading',
   context: {
+    title: null,
+    artist: null,
+    duration: 0,
+    elapsed: 0,
+    likeStatus: undefined,
+    volume: 0,
     // Add initial context here for:
     // title, artist, duration, elapsed, likeStatus, volume
   },
@@ -121,7 +126,7 @@ elements.elDislikeButton.addEventListener('click', () => {
   service.send({ type: 'DISLIKE' });
 });
 
-service.subscribe((state) => {
+service.subscribe(state => {
   console.log(state.context);
   const { context } = state;
 

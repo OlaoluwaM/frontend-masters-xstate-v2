@@ -1,4 +1,3 @@
-// @ts-check
 import '../style.css';
 import { createMachine, assign, interpret, send } from 'xstate';
 
@@ -7,6 +6,8 @@ import { raise } from 'xstate/lib/actions';
 import { formatTime } from '../utils/formatTime';
 
 const playerMachine = createMachine({
+  type: 'parallel',
+
   context: {
     title: undefined,
     artist: undefined,
@@ -23,77 +24,93 @@ const playerMachine = createMachine({
   //   player: 'loading',
   //   volume: 'muted'
   // }
+
   initial: 'loading',
   states: {
     // These states should be in a parent 'player' region
-    loading: {
-      id: 'loading',
-      tags: ['loading'],
-      on: {
-        LOADED: {
-          actions: 'assignSongData',
-          target: 'ready',
+    player: {
+      loading: {
+        id: 'loading',
+        tags: ['loading'],
+        on: {
+          LOADED: {
+            actions: 'assignSongData',
+            target: 'ready',
+          },
         },
       },
-    },
-    ready: {
-      initial: 'playing',
-      states: {
-        paused: {
-          on: {
-            PLAY: { target: 'playing' },
+
+      ready: {
+        initial: 'playing',
+
+        states: {
+          paused: {
+            on: {
+              PLAY: { target: 'playing' },
+            },
+          },
+
+          playing: {
+            entry: 'playAudio',
+            exit: 'pauseAudio',
+
+            on: {
+              PAUSE: { target: 'paused' },
+            },
+
+            always: {
+              cond: ctx => ctx.elapsed >= ctx.duration,
+              target: '#loading',
+            },
           },
         },
-        playing: {
-          entry: 'playAudio',
-          exit: 'pauseAudio',
-          on: {
-            PAUSE: { target: 'paused' },
-          },
-          always: {
-            cond: (ctx) => ctx.elapsed >= ctx.duration,
-            target: '#loading',
-          },
+      },
+
+      on: {
+        // These should belong to the 'player' region
+        SKIP: {
+          actions: 'skipSong',
+          target: '#loading',
+        },
+        LIKE: {
+          actions: 'likeSong',
+        },
+        UNLIKE: {
+          actions: 'unlikeSong',
+        },
+        DISLIKE: {
+          actions: ['dislikeSong', raise('SKIP')],
+        },
+        'AUDIO.TIME': {
+          actions: 'assignTime',
         },
       },
     },
 
     // These states should be in a parent 'volume' region
-    unmuted: {
-      on: {
-        'VOLUME.TOGGLE': 'muted',
+    volume: {
+      initial: 'unmuted',
+      states: {
+        unmuted: {
+          on: {
+            'VOLUME.TOGGLE': 'muted',
+          },
+        },
+
+        muted: {
+          on: {
+            'VOLUME.TOGGLE': 'unmuted',
+          },
+        },
       },
-    },
-    muted: {
-      on: {
-        'VOLUME.TOGGLE': 'unmuted',
+
+      VOLUME: {
+        cond: 'volumeWithinRange',
+        actions: 'assignVolume',
       },
-    },
-  },
-  on: {
-    // These should belong to the 'player' region
-    SKIP: {
-      actions: 'skipSong',
-      target: '#loading',
-    },
-    LIKE: {
-      actions: 'likeSong',
-    },
-    UNLIKE: {
-      actions: 'unlikeSong',
-    },
-    DISLIKE: {
-      actions: ['dislikeSong', raise('SKIP')],
-    },
-    'AUDIO.TIME': {
-      actions: 'assignTime',
     },
 
     // This should belong to the 'volume' region
-    VOLUME: {
-      cond: 'volumeWithinRange',
-      actions: 'assignVolume',
-    },
   },
 }).withConfig({
   actions: {
@@ -154,7 +171,7 @@ elements.elVolumeButton.addEventListener('click', () => {
   service.send({ type: 'VOLUME.TOGGLE' });
 });
 
-service.subscribe((state) => {
+service.subscribe(state => {
   console.log(state.value, state.context);
   const { context } = state;
 

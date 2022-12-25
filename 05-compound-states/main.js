@@ -8,6 +8,7 @@ import { formatTime } from '../utils/formatTime';
 
 const playerMachine = createMachine({
   initial: 'loading',
+
   context: {
     title: undefined,
     artist: undefined,
@@ -16,37 +17,51 @@ const playerMachine = createMachine({
     likeStatus: 'unliked', // or 'liked' or 'disliked'
     volume: 5,
   },
+
   states: {
     loading: {
       tags: ['loading'],
+
       id: 'loading',
+
       on: {
         LOADED: {
           actions: 'assignSongData',
           // Make this go to a 'ready' state instead
-          target: 'paused',
+          target: 'ready',
         },
       },
     },
+
     // Refactor the 'paused' and 'playing' states so that
     // they are children of the 'ready' state.
     // Don't forget to add an initial state!
-    paused: {
-      on: {
-        PLAY: { target: 'playing' },
-      },
-    },
-    playing: {
-      entry: 'playAudio',
-      exit: 'pauseAudio',
-      on: {
-        PAUSE: { target: 'paused' },
-      },
-      always: {
-        cond: (ctx) => ctx.elapsed >= ctx.duration,
-        // We changed this to an ID so that it can target
-        // the loading state at any position
-        target: '#loading',
+
+    ready: {
+      initial: 'playing',
+
+      states: {
+        playing: {
+          entry: 'playAudio',
+          exit: 'pauseAudio',
+
+          on: {
+            PAUSE: { target: 'paused' },
+          },
+
+          always: {
+            cond: ctx => ctx.elapsed >= ctx.duration,
+            // We changed this to an ID so that it can target
+            // the loading state at any position
+            target: '#loading',
+          },
+        },
+
+        paused: {
+          on: {
+            PLAY: { target: 'playing' },
+          },
+        },
       },
     },
   },
@@ -128,7 +143,7 @@ elements.elDislikeButton.addEventListener('click', () => {
   service.send({ type: 'DISLIKE' });
 });
 
-service.subscribe((state) => {
+service.subscribe(state => {
   console.log(state.value, state.context);
   const { context } = state;
 

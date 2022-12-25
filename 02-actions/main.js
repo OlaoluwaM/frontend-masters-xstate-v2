@@ -11,6 +11,7 @@ const playerMachine = createMachine({
       on: {
         LOADED: {
           // Add an action here to assign the song data
+          actions: ['assignDataForSongToBePlayed'],
           target: 'playing',
         },
       },
@@ -21,6 +22,8 @@ const playerMachine = createMachine({
       },
     },
     playing: {
+      entry: ['playSong'],
+      exit: ['pauseSong'],
       // When this state is entered, add an action to play the audio
       // When this state is exited, add an action to pause the audio
       on: {
@@ -31,19 +34,24 @@ const playerMachine = createMachine({
   on: {
     SKIP: {
       // Add an action to skip the song
+      actions: ['skipCurrentSong'],
       target: 'loading',
     },
     LIKE: {
       // Add an action to like the song
+      actions: ['likeSong'],
     },
     UNLIKE: {
       // Add an action to unlike the song
+      actions: ['unlikeSong'],
     },
     DISLIKE: {
       // Add two actions to dislike the song and raise the skip event
+      actions: ['unlikeSong', 'skipCurrentSong'],
     },
     VOLUME: {
       // Add an action to assign to the volume
+      actions: ['muteOrUnmute'],
     },
   },
 }).withConfig({
@@ -71,7 +79,7 @@ elements.elDislikeButton.addEventListener('click', () => {
 
 const service = interpret(playerMachine).start();
 
-service.subscribe((state) => {
+service.subscribe(state => {
   console.log(state.actions);
 
   elements.elLoadingButton.hidden = !state.matches('loading');

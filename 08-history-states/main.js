@@ -28,7 +28,7 @@ const playerMachine = createMachine({
               // This will always go to the 'ready.playing' state
               // Instead, go to the most recent child of the 'ready' state
               // (Hint: target a history state!)
-              target: 'ready',
+              target: 'ready.hist',
             },
           },
         },
@@ -40,6 +40,9 @@ const playerMachine = createMachine({
                 PLAY: { target: 'playing' },
               },
             },
+            hist: {
+              type: 'history',
+            },
             playing: {
               entry: 'playAudio',
               exit: 'pauseAudio',
@@ -50,7 +53,7 @@ const playerMachine = createMachine({
             // Add a sibling history state here
           },
           always: {
-            cond: (ctx) => ctx.elapsed >= ctx.duration,
+            cond: ctx => ctx.elapsed >= ctx.duration,
             target: 'finished',
           },
         },
@@ -161,7 +164,7 @@ elements.elVolumeButton.addEventListener('click', () => {
   service.send({ type: 'VOLUME.TOGGLE' });
 });
 
-service.subscribe((state) => {
+service.subscribe(state => {
   console.log(state.value, state.context);
   const { context } = state;
 
